@@ -25,43 +25,61 @@
 - 下方向键加速下落
 - 空格键直接落下
 
-## 安装说明
+## 开发环境
 
-### 环境准备
+### 基础环境
+1. Python 3.8 或更高版本
+2. pip 包管理工具
+3. git 版本控制工具
 
-1. 确保安装了 Python 3.8 或更高版本。
-2. 克隆项目到本地：
+### 获取代码
+```bash
+git clone https://github.com/barrysen/game_collection.git
+cd game_collection
+```
 
-   ```bash
-   git clone https://github.com/barrysen/game_collection.git
-   cd game_collection
-   ```
+### 安装依赖
+```bash
+pip install -r requirements.txt
+```
 
-3. 安装依赖：
+## 运行方式
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 开发模式
+直接运行游戏菜单：
+```bash
+python game_menu.py
+```
 
-### 打包游戏
-
+### 桌面版本
 1. 运行打包脚本：
-
    ```bash
    python build.py
    ```
+2. 运行方式：
+   - Windows: 双击 `Install/经典游戏合集.exe`
+   - macOS: 双击 `Install/经典游戏合集.app`
 
-   这将使用 PyInstaller 打包游戏，生成的可执行文件会在 `Install` 目录下。
-
-### 运行游戏
-
-- Windows 用户：双击 `Install/经典游戏合集.exe` 运行游戏。
-- Mac 用户：双击 `Install/经典游戏合集.app` 运行游戏。
+## 项目结构
+```
+game_collection/
+├── game_menu.py     # 游戏菜单主程序
+├── snake_game.py    # 贪吃蛇游戏
+├── tetris_game.py   # 俄罗斯方块游戏
+├── scores.py        # 分数管理
+├── build.py         # 桌面版打包脚本
+└── requirements.txt # 项目依赖
+```
 
 ## 注意事项
 - 游戏会自动保存最高分记录
 - 如遇到字体显示问题，请确保系统安装了中文字体
+- 打包功能需要额外的环境配置，详见打包脚本中的说明
 
 ## 贡献指南
 
-欢迎为经典游戏合集做出贡献！请查看 [CONTRIBUTING.md](docs/CONTRIBUTING.md) 了解更多信息。 
+欢迎为经典游戏合集做出贡献！请查看 [CONTRIBUTING.md](docs/CONTRIBUTING.md) 了解更多信息。
+
+## 许可证
+
+本项目采用 MIT 许可证，详见 [LICENSE](LICENSE) 文件。 

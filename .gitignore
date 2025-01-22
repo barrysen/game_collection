@@ -37,4 +37,9 @@ high_scores.json
 
 # 操作系统
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Android 构建
+.buildozer/
+bin/
+buildozer.spec 

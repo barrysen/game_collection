@@ -23,6 +23,115 @@ def install_requirements():
             print(f"安装 {req} 失败: {e.stderr}")
             raise
 
+def clean_install_dir(install_dir):
+    """清理安装目录"""
+    if os.path.exists(install_dir):
+        print("\n清理旧的安装文件...")
+        try:
+            for item in os.listdir(install_dir):
+                item_path = os.path.join(install_dir, item)
+                if os.path.isfile(item_path):
+                    os.remove(item_path)
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+            print("✓ 清理完成")
+        except Exception as e:
+            print(f"清理过程中出现错误: {e}")
+            raise
+
+def get_system_specific_config():
+    """获取系统特定的配置"""
+    system = platform.system()
+    
+    # 获取 pygame 安装路径
+    import pygame
+    pygame_path = os.path.dirname(pygame.__file__)
+    
+    config = {
+        'extra_args': [
+            '--noupx',  # 禁用 UPX 压缩以提高启动速度
+            '--clean'
+        ],
+        'hidden_imports': [
+            'pygame',
+            'numpy',
+            'json',
+            'random',
+            'sys',
+            'os',
+            'time'
+        ],
+        'binary_paths': [],
+        'data_paths': []
+    }
+
+    if system == 'Darwin':  # macOS
+        # 检测是否是 Apple Silicon
+        is_arm = platform.machine() == 'arm64'
+        
+        config['extra_args'].extend([
+            '--codesign-identity', '-',
+            '--osx-bundle-identifier', 'com.barrysen.gamecollection',
+            '--noconsole',
+            '--name', '经典游戏合集',
+            '--hidden-import', 'pkg_resources.py2_warn'
+        ])
+        
+        # 如果是 Apple Silicon，不使用 universal2
+        if not is_arm:
+            config['extra_args'].extend(['--target-architecture', 'universal2'])
+        
+        # 使用实际的 pygame 路径
+        config['binary_paths'].append(f'{pygame_path}:pygame')
+        
+        # 添加 SDL2 相关文件
+        sdl_paths = [
+            '/opt/homebrew/lib/libSDL2-2.0.0.dylib',
+            '/opt/homebrew/lib/libSDL2_image-2.0.0.dylib',
+            '/opt/homebrew/lib/libSDL2_mixer-2.0.0.dylib',
+            '/opt/homebrew/lib/libSDL2_ttf-2.0.0.dylib'
+        ]
+        
+        for sdl_path in sdl_paths:
+            if os.path.exists(sdl_path):
+                config['binary_paths'].append(f'{sdl_path}:.')
+        
+    elif system == 'Windows':
+        config['extra_args'].extend([
+            '--noconsole',
+            '--uac-admin',
+            '--win-private-assemblies',
+            '--win-no-prefer-redirects',
+            '--name', '经典游戏合集'
+        ])
+        # Windows 上使用分号作为分隔符
+        config['binary_paths'].append(f'{pygame_path};pygame')
+        config['hidden_imports'].extend([
+            'win32api',
+            'win32con'
+        ])
+        
+    elif system == 'Linux':
+        config['extra_args'].extend([
+            '--noconsole',
+            '--runtime-tmpdir', '.',
+            '--name', '经典游戏合集'
+        ])
+        # Linux 上使用冒号作为分隔符
+        config['binary_paths'].append(f'{pygame_path}:pygame')
+        config['hidden_imports'].extend([
+            'cairo',
+            'gi'
+        ])
+
+    # 添加 pygame 相关的数据文件
+    pygame_data = os.path.join(pygame_path, 'pygame_sdl2_data')
+    if os.path.exists(pygame_data):
+        separator = ';' if system == 'Windows' else ':'
+        config['data_paths'].append(f'{pygame_data}{separator}pygame_sdl2_data')
+
+    return config
+
 def main():
     # 首先安装依赖
     install_requirements()
@@ -53,27 +162,49 @@ def main():
             if not os.path.exists(install_dir):
                 os.makedirs(install_dir)
             
+            # 在打包前清理安装目录
+            clean_install_dir(install_dir)
+            
             # 准备打包命令
             print("\n准备打包环境...")
-            show_progress_bar("环境准备", 2)  # 显示2秒的准备进度
+            show_progress_bar("环境准备", 2)
             
-            # 确保使用绝对路径
-            scores_path = os.path.join(current_dir, 'scores.py')
-            game_menu_path = os.path.join(current_dir, 'game_menu.py')
+            # 获取系统特定配置
+            config = get_system_specific_config()
             
+            # 基本命令
             cmd = [
                 sys.executable,
                 '-m',
                 'PyInstaller',
                 '--noconfirm',
                 '--onefile',
-                '--windowed',
                 '--clean',
                 '--distpath', install_dir,
                 '--workpath', os.path.join(current_dir, 'build', 'temp'),
-                '--specpath', os.path.join(current_dir, 'build'),
-                '--name', '经典游戏合集'
+                '--specpath', os.path.join(current_dir, 'build')
             ]
+            
+            # 在 macOS 上添加额外的链接器参数
+            if system == 'Darwin':
+                os.environ['DYLD_LIBRARY_PATH'] = '/opt/homebrew/lib'
+                if platform.machine() == 'arm64':
+                    os.environ['ARCHFLAGS'] = '-arch arm64'
+            
+            # 添加系统特定参数
+            cmd.extend(config['extra_args'])
+            
+            # 添加隐藏导入
+            for hidden_import in config['hidden_imports']:
+                cmd.extend(['--hidden-import', hidden_import])
+            
+            # 添加二进制文件
+            for binary_path in config['binary_paths']:
+                cmd.extend(['--add-binary', binary_path])
+            
+            # 添加数据文件
+            for data_path in config['data_paths']:
+                cmd.extend(['--add-data', data_path])
             
             # 添加图标
             if system == 'Windows' and os.path.exists('icon.ico'):
@@ -83,6 +214,7 @@ def main():
             
             # 添加所有必需的文件
             separator = ';' if system == 'Windows' else ':'
+            scores_path = os.path.join(current_dir, 'scores.py')
             cmd.extend(['--add-data', f'{scores_path}{separator}.'])
             
             # 添加其他Python文件
@@ -91,18 +223,29 @@ def main():
                 if os.path.exists(py_path):
                     cmd.extend(['--add-data', f'{py_path}{separator}.'])
             
-            # 添加字体文件（如果存在）
-            font_paths = [
-                "/System/Library/Fonts/Hiragino Sans GB.ttc",
-                "/System/Library/Fonts/STHeiti Light.ttc",
-                "C:\\Windows\\Fonts\\msyh.ttc",
-            ]
-            for font_path in font_paths:
+            # 添加字体文件
+            font_paths = {
+                'Darwin': [
+                    "/System/Library/Fonts/Hiragino Sans GB.ttc",
+                    "/System/Library/Fonts/STHeiti Light.ttc"
+                ],
+                'Windows': [
+                    "C:\\Windows\\Fonts\\msyh.ttc",
+                    "C:\\Windows\\Fonts\\simhei.ttf"
+                ],
+                'Linux': [
+                    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+                    "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"
+                ]
+            }
+            
+            for font_path in font_paths.get(system, []):
                 if os.path.exists(font_path):
                     cmd.extend(['--add-data', f'{font_path}{separator}.'])
                     break
             
             # 主程序文件
+            game_menu_path = os.path.join(current_dir, 'game_menu.py')
             cmd.append(game_menu_path)
             
             # 执行打包命令
@@ -184,6 +327,16 @@ def main():
                 elif system == 'Windows':
                     print("\n运行方式：")
                     print("双击 Install/经典游戏合集.exe")
+
+                # 在 macOS 上设置可执行权限
+                if system == 'Darwin':
+                    os.chmod(executable_path, 0o755)
+                    # 如果存在 .app 文件，也设置其权限
+                    app_path = os.path.join(install_dir, f"{executable_name}.app")
+                    if os.path.exists(app_path):
+                        os.system(f'chmod -R 755 "{app_path}"')
+                        # 对 .app 包进行签名
+                        os.system(f'codesign --force --deep --sign - "{app_path}"')
             else:
                 print("\n打包失败！未找到生成的可执行文件")
                 if stdout:
@@ -220,6 +373,43 @@ def main():
                     os.remove(spec_file)
                 except:
                     pass
+
+            if system == 'Darwin':
+                # 创建 Info.plist
+                info_plist_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>经典游戏合集</string>
+    <key>CFBundleExecutable</key>
+    <string>经典游戏合集</string>
+    <key>CFBundleIconFile</key>
+    <string>icon.icns</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.barrysen.gamecollection</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>经典游戏合集</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.13.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSRequiresAquaSystemAppearance</key>
+    <false/>
+</dict>
+</plist>
+'''
+                info_plist_path = os.path.join(current_dir, 'Info.plist')
+                with open(info_plist_path, 'w') as f:
+                    f.write(info_plist_content)
+                cmd.extend(['--osx-bundle-identifier', 'com.barrysen.gamecollection'])
+                cmd.extend(['--plist', info_plist_path])
 
     return build()
 
