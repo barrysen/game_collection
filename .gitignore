@@ -23,6 +23,8 @@ wheels/
 # PyInstaller
 dist/
 build/
+Install/
+*.spec
 
 # 游戏生成的文件
 high_scores.json

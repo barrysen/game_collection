@@ -27,14 +27,41 @@
 
 ## 安装说明
 
-### Windows用户
-1. 下载 `经典游戏合集.exe`
-2. 双击运行即可
+### 环境准备
 
-### Mac用户
-1. 下载 `经典游戏合集.app`
-2. 双击运行即可
+1. 确保安装了 Python 3.8 或更高版本。
+2. 克隆项目到本地：
+
+   ```bash
+   git clone https://github.com/barrysen/game_collection.git
+   cd game_collection
+   ```
+
+3. 安装依赖：
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### 打包游戏
+
+1. 运行打包脚本：
+
+   ```bash
+   python build.py
+   ```
+
+   这将使用 PyInstaller 打包游戏，生成的可执行文件会在 `Install` 目录下。
+
+### 运行游戏
+
+- Windows 用户：双击 `Install/经典游戏合集.exe` 运行游戏。
+- Mac 用户：双击 `Install/经典游戏合集.app` 运行游戏。
 
 ## 注意事项
 - 游戏会自动保存最高分记录
-- 如遇到字体显示问题，请确保系统安装了中文字体 
+- 如遇到字体显示问题，请确保系统安装了中文字体
+
+## 贡献指南
+
+欢迎为经典游戏合集做出贡献！请查看 [CONTRIBUTING.md](docs/CONTRIBUTING.md) 了解更多信息。 
