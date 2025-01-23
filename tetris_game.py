@@ -94,6 +94,9 @@ class Button:
         # 选择字体
         font = small_font if self.small else game_font
         
+        # 修改文字颜色逻辑
+        text_color = BACK_BTN_TEXT if self.color == BACK_BTN_COLOR else BUTTON_TEXT
+        
         # 计算文本位置
         if self.icon:
             # 如果有图标，先绘制图标
@@ -111,8 +114,8 @@ class Button:
             )
             
             # 绘制图标和文本
-            font.render_to(surface, icon_pos, self.icon, BUTTON_TEXT)  # 使用白色文字
-            font.render_to(surface, text_pos, self.text, BUTTON_TEXT)  # 使用白色文字
+            font.render_to(surface, icon_pos, self.icon, text_color)
+            font.render_to(surface, text_pos, self.text, text_color)
         else:
             # 没有图标，只绘制文本
             text_rect = font.get_rect(self.text)
@@ -120,7 +123,7 @@ class Button:
                 self.rect.centerx - text_rect.width//2,
                 self.rect.centery - text_rect.height//2
             )
-            font.render_to(surface, text_pos, self.text, BUTTON_TEXT)  # 使用白色文字
+            font.render_to(surface, text_pos, self.text, text_color)
     
     def handle_event(self, event):
         if event.type == pygame.MOUSEMOTION:

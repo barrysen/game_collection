@@ -3,6 +3,7 @@ import pygame
 import sys
 import snake_game
 import tetris_game
+import minesweeper_game
 import pygame.freetype
 
 # 初始化 Pygame
@@ -47,14 +48,13 @@ except Exception as e:
         small_font = pygame.freetype.SysFont(None, 24)  # 添加小号字体
 
 class Button:
-    def __init__(self, x, y, width, height, text, icon=None, small=False):
+    def __init__(self, x, y, width, height, text, description=None):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
-        self.icon = icon  # 添加图标
+        self.description = description
         self.color = BUTTON_COLOR
         self.is_hovered = False
         self.border_radius = 10
-        self.small = small  # 是否使用小号字体
         
     def draw(self, surface):
         # 绘制按钮阴影
@@ -67,36 +67,31 @@ class Button:
         pygame.draw.rect(surface, color, self.rect, border_radius=self.border_radius)
         pygame.draw.rect(surface, BUTTON_BORDER, self.rect, 2, border_radius=self.border_radius)
         
-        # 选择字体
-        font = small_font if self.small else game_font
+        # 绘制文本（居中）
+        text_rect = game_font.get_rect(self.text)
+        text_pos = (
+            self.rect.centerx - text_rect.width // 2,
+            self.rect.centery - text_rect.height // 2
+        )
+        game_font.render_to(surface, text_pos, self.text, TEXT_COLOR)
         
-        # 计算文本位置
-        if self.icon:
-            # 如果有图标，先绘制图标
-            icon_rect = font.get_rect(self.icon)
-            text_rect = font.get_rect(self.text)
-            total_width = icon_rect.width + text_rect.width + 5  # 5是图标和文字的间距
-            
-            icon_pos = (
-                self.rect.centerx - total_width//2,
-                self.rect.centery - icon_rect.height//2
+        # 如果有描述文本且鼠标悬停时显示
+        if self.description and self.is_hovered:
+            desc_rect = small_font.get_rect(self.description)
+            desc_pos = (
+                self.rect.centerx - desc_rect.width // 2,
+                self.rect.bottom + 10
             )
-            text_pos = (
-                self.rect.centerx - total_width//2 + icon_rect.width + 5,
-                self.rect.centery - text_rect.height//2
+            # 绘制描述文本背景
+            bg_rect = pygame.Rect(
+                desc_pos[0] - 10,
+                desc_pos[1] - 5,
+                desc_rect.width + 20,
+                desc_rect.height + 10
             )
-            
-            # 绘制图标和文本
-            font.render_to(surface, icon_pos, self.icon, TEXT_COLOR)
-            font.render_to(surface, text_pos, self.text, TEXT_COLOR)
-        else:
-            # 没有图标，只绘制文本
-            text_rect = font.get_rect(self.text)
-            text_pos = (
-                self.rect.centerx - text_rect.width//2,
-                self.rect.centery - text_rect.height//2
-            )
-            font.render_to(surface, text_pos, self.text, TEXT_COLOR)
+            pygame.draw.rect(surface, WHITE, bg_rect, border_radius=5)
+            pygame.draw.rect(surface, BUTTON_BORDER, bg_rect, 1, border_radius=5)
+            small_font.render_to(surface, desc_pos, self.description, TEXT_COLOR)
 
     def handle_event(self, event):
         if event.type == pygame.MOUSEMOTION:
@@ -109,15 +104,42 @@ class Button:
 
 def main():
     # 创建按钮 - 调整按钮大小和位置
-    button_width = 240
-    button_height = 80
-    spacing = 60  # 按钮之间的间距
+    button_width = 200  # 适中的按钮宽度
+    button_height = 60  # 适中的按钮高度
+    vertical_spacing = 80  # 按钮之间的垂直间距
     
-    total_width = 2 * button_width + spacing
-    start_x = (WINDOW_WIDTH - total_width) // 2
+    # 标题位置
+    title_y = 80  # 固定标题在顶部
+    subtitle_y = title_y + 80  # 副标题在标题下方
     
-    snake_btn = Button(start_x, WINDOW_HEIGHT//2, button_width, button_height, "贪吃蛇")
-    tetris_btn = Button(start_x + button_width + spacing, WINDOW_HEIGHT//2, button_width, button_height, "俄罗斯方块")
+    # 计算按钮起始位置，确保整体布局居中
+    content_height = 3 * button_height + 2 * vertical_spacing  # 按钮区域总高度
+    start_y = (WINDOW_HEIGHT + subtitle_y - content_height) // 2  # 从中间向下布局
+    
+    # 所有按钮水平居中
+    center_x = WINDOW_WIDTH // 2 - button_width // 2
+    
+    # 创建三个按钮，垂直排列，添加描述
+    snake_btn = Button(
+        center_x, start_y,
+        button_width, button_height,
+        "贪吃蛇",
+        "通过方向键控制蛇移动，吃到食物可以增加长度"
+    )
+    
+    tetris_btn = Button(
+        center_x, start_y + button_height + vertical_spacing,
+        button_width, button_height,
+        "俄罗斯方块",
+        "经典俄罗斯方块，使用方向键控制方块移动和旋转"
+    )
+    
+    minesweeper_btn = Button(
+        center_x, start_y + 2 * (button_height + vertical_spacing),
+        button_width, button_height,
+        "扫雷",
+        "经典扫雷游戏，左键点击揭示方块，右键标记地雷"
+    )
     
     # 主循环
     running = True
@@ -129,7 +151,7 @@ def main():
         title_rect = title_font.get_rect(title_text)
         title_pos = (
             WINDOW_WIDTH//2 - title_rect.width // 2,
-            WINDOW_HEIGHT//3 - title_rect.height // 2
+            title_y
         )
         title_font.render_to(screen, title_pos, title_text, TEXT_COLOR)
         
@@ -138,13 +160,14 @@ def main():
         subtitle_rect = game_font.get_rect(subtitle_text)
         subtitle_pos = (
             WINDOW_WIDTH//2 - subtitle_rect.width // 2,
-            WINDOW_HEIGHT//3 + title_rect.height
+            subtitle_y
         )
         game_font.render_to(screen, subtitle_pos, subtitle_text, TEXT_COLOR)
         
         # 绘制按钮
         snake_btn.draw(screen)
         tetris_btn.draw(screen)
+        minesweeper_btn.draw(screen)
         
         # 事件处理
         for event in pygame.event.get():
@@ -160,6 +183,12 @@ def main():
                 
             if tetris_btn.handle_event(event):
                 tetris_game.main()
+                # 游戏结束后返回菜单
+                pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+                pygame.display.set_caption('游戏选择')
+                
+            if minesweeper_btn.handle_event(event):
+                minesweeper_game.main()
                 # 游戏结束后返回菜单
                 pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
                 pygame.display.set_caption('游戏选择')

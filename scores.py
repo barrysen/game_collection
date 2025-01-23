@@ -10,8 +10,8 @@ def load_scores():
             with open(SCORES_FILE, 'r') as f:
                 return json.load(f)
         except:
-            return {"snake": 0, "tetris": 0}
-    return {"snake": 0, "tetris": 0}
+            return {"snake": 0, "tetris": 0, "minesweeper": 0}
+    return {"snake": 0, "tetris": 0, "minesweeper": 0}
 
 def save_score(game_name: str, score: int):
     """保存新的最高分数"""
